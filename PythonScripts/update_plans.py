@@ -2,15 +2,16 @@ import requests
 from datetime import datetime
 from xml.etree import ElementTree
 
-from filesncodes import dbapi, stations_to_scan
+from filesncodes import dbapi, stations_to_scan_file
 from base import Session
 from station import Station
 from trip import Trip
-
+from pandas import DataFrame, read_csv
+from time import sleep
 
 def get_plans(station, time):
-    headers = {"Authorization": f"Bearer {dbapi}"}
-    r = requests.get(f"https://api.deutschebahn.com/timetables/v1/plan/{station}/{time}", headers=headers)
+    headers = {"Authorization": "Bearer %s" % dbapi}
+    r = requests.get("https://api.deutschebahn.com/timetables/v1/plan/%s/%s" % (station, time), headers=headers)
     results = ElementTree.fromstring(r.content)
     return results
 
@@ -50,18 +51,23 @@ def main():
     session = Session()
     if session is not None:
         this_hour = datetime.now().strftime("%y%m%d/%H")
-        for _, eva_number in stations_to_scan.items():
+        # read list of stations to scan from csv file created when the database 
+        # was populated with station data
+        stations_to_scan = read_csv(stations_to_scan_file, header=None)
+        # loop through all eva_numbers in stations_to_scan file and fetch plan data
+        for eva_number in stations_to_scan.iloc[:,0]:         
             raw_plans = get_plans(eva_number, this_hour)
             for plan in raw_plans:
                 clean_plan = process_plan(eva_number, plan)
                 insert_plan = Trip()
                 insert_plan.set_var(clean_plan)
                 session.merge(insert_plan)
-                print(f"New plan data fetched for {insert_plan.eva_number}")
+            print("New plan data fetched for %s" % insert_plan.eva_number)
+            sleep(3)
         session.commit()
         session.close()
     else:
-        print("Error! cannot create the database connection.")     
+        print("Error! cannot create the database connection.") 
 
 
 if __name__ == '__main__':

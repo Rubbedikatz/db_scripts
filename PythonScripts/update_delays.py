@@ -5,10 +5,11 @@ from xml.etree import ElementTree
 from base import Session
 from station import Station
 from trip import Trip
-from filesncodes import dbapi
+from filesncodes import dbapi, stations_to_scan_file
+from pandas import DataFrame, read_csv
+from time import sleep
 
 session = Session()
-eva_numbers = [8010101]  # eva for Erfurt Hbf
 this_hour = datetime.now().strftime("%y%m%d%H")
 
 
@@ -18,8 +19,8 @@ def get_delays(eva_number):
     from the timetable API on deutschebahn.com and
     returns an XML object
     """
-    headers = {"Authorization": f"Bearer {dbapi}"}
-    r = requests.get(f"https://api.deutschebahn.com/timetables/v1/fchg/{eva_number}", headers=headers)
+    headers = {"Authorization": "Bearer %s" % dbapi}
+    r = requests.get("https://api.deutschebahn.com/timetables/v1/fchg/%s" % eva_number, headers=headers)
     results = ElementTree.fromstring(r.content)
     return results
 
@@ -41,19 +42,21 @@ def update_trips_with_delay(delay, trips):
     for t in trips:
         if t.id == delay["id"]:
             session.query(Trip).filter(Trip.id == t.id).update({"car": delay["car"], "cdp": delay["cdp"]})
-            print(f"Delay data added for trip at {t.eva_number}")
+            print("Delay data added for trip at %s" % t.eva_number)
 
 
 if __name__ == "__main__":
-    for station in eva_numbers:
-        trips_this_hour = session.query(Trip).filter(Trip.eva_number == station)\
+    stations_to_scan = read_csv(stations_to_scan_file, header=None)
+    for eva_number in stations_to_scan.iloc[:,0]:
+        trips_this_hour = session.query(Trip).filter(Trip.eva_number == eva_number)\
             .filter(Trip.hour_retrieved == this_hour)
         if trips_this_hour.first() is not None:
-            raw_delays = get_delays(station)
+            sleep(3)
+            raw_delays = get_delays(eva_number)
             for row in raw_delays:
                 delayed = process_delays(row)
                 update_trips_with_delay(delayed, trips_this_hour.all())
         else:
-            print(f"No trips found for {station} this hour. Abort updating delays.")
+            print("No trips found for % this hour. Abort updating delays." % station)
     session.commit()
     session.close()

@@ -2,8 +2,9 @@ import pandas as pd
 import requests
 import json
 
+from time import sleep
 from base import engine
-from filesncodes import dbapi, stationsfile, areasfile
+from filesncodes import dbapi, stationsfile, areasfile, stations_to_scan_file
 
 
 def populate_areas(con, file):
@@ -41,19 +42,22 @@ def process_row(json_file):
     
         
 def populate_stations(con, filename):
-    allstations_df = pd.read_csv(filename, sep=";")
+    # read all stations from a csv file available at http://download-data.deutschebahn.com/static/datasets/stationsdaten/DBSuS-Uebersicht_Bahnhoefe-Stand2018-03.csv
+    allstations_df = pd.read_csv(filename, sep=";")    
+    # filter out all stations of category 1 (those are the biggest) and add Erfurt which is a category 2 but has more traffic coming through
     cat1_df = allstations_df.loc[allstations_df["Kat. Vst"] <= 1, "Bf. Nr."]
     erfurt = allstations_df.loc[allstations_df["Station"] == "Erfurt Hbf", "Bf. Nr."]
     allstations_df = cat1_df.append(erfurt)
-    #allstations_df = allstations_df.loc[allstations_df["Station"] == "Erfurt Hbf", ["Bf. Nr."]]  # for testing only fetch Erfurt
+    #allstations_df = allstations_df.iloc[0:5]  # for testing only fetch first 5 stations
     df = pd.DataFrame()
-    for number in allstations_df["Bf. Nr."]:
+    for number in allstations_df:
+        sleep(2)
         raw_station = fetch_station_data(number)
         ins_station = process_row(raw_station)
         df = df.append(ins_station)
-        print(f"{ins_station['name']} added to stations table")
+        print("%s added to stations table" % ins_station['name'])    
     df.to_sql("stations", con, if_exists="append", index=True, index_label="eva_number")
-     
+    df["name"].to_csv(stations_to_scan_file)
      
 def main():
     if engine is not None:

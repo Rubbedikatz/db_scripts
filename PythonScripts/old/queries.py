@@ -1,10 +1,7 @@
-from base import Session, engine
-from station import Station
+from PythonScripts.base import Session, engine
 from trip import Trip
 # from area import Area
 # from weather import Weather
-import pandas as pd
-from filesncodes import stationsfile
 
 session = Session()
 

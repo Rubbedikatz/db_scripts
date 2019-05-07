@@ -2,9 +2,9 @@ import requests
 from datetime import datetime
 from xml.etree import ElementTree
 
-from base import Session
-from sqlalchemy_objects import Station, Trip
-from api_keys import dbapi
+from PythonScripts.base import Session
+from PythonScripts.sqlalchemy_objects import Station, Trip
+from PythonScripts.api_keys import dbapi
 from time import sleep
 
 session = Session()

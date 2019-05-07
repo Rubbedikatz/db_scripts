@@ -1,7 +1,7 @@
 from base import engine, Base
-from sqlalchemy_objects import Station, Weather, Trip, Area
 from time import sleep
 from api_keys import dbapi
+from sqlalchemy_objects import Station, Trip, Weather, Area
 import requests
 import pandas as pd
 import json
@@ -16,7 +16,7 @@ def create_database(con):
 
 def populate_areas(con):
     try:
-        df = pd.read_csv("areas.csv")
+        df = pd.read_csv("../areas.csv")
         df.to_sql("areas", con, if_exists="append", index=False)
         print("areas populated")
     except FileNotFoundError as e:
@@ -62,12 +62,12 @@ def populate_stations(con):
 
     biggest_stations = all_stations.loc[all_stations["Kat. Vst"] <= 1, "Bf. Nr."]
     insert_df = pd.DataFrame()
-    for number in biggest_stations[0:5]:
+    for number in biggest_stations:
         sleep(2)  # delay api calls to avoid hitting the rate limit
         raw_station = fetch_station_data(number)
         ins_station = process_row(raw_station)
         insert_df = insert_df.append(ins_station)
-        print("%s ready to be added to database" % ins_station['name'][0])
+        print("%s ready to be added to database" % ins_station.loc[:, "name"].iloc[0])
     insert_df.to_sql("stations", con, if_exists="replace", index=True, index_label="eva_number")
     print("All stations added to database")
 

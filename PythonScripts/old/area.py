@@ -1,7 +1,7 @@
 from sqlalchemy import Column, String, Float
 from sqlalchemy.orm import relationship
 
-from base import Base
+from PythonScripts.base import Base
 
 
 class Area(Base):

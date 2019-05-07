@@ -65,17 +65,20 @@ def get_stations_from_db(sess):
     return stations
 
 
-def update_plans(sess, stations, this_hour):
+def update_plans(sess, stations, hour):
     """
     reads list of stations to scan from csv file created when the database
     was populated with station data
     checks before if plan for this hour was already downloaded to avoid unnecessary api calls
     """
-    with open("log.txt", "r") as f:
-        last_updated = f.readlines()
-    if last_updated != [this_hour]:
+    try:
+        with open("log.txt", "r") as f:
+            last_updated = f.readlines()
+    except FileNotFoundError:
+        last_updated = 0
+    if last_updated != [hour]:
         for eva_number in set(stations):
-            raw_plans = get_plans(eva_number, this_hour)
+            raw_plans = get_plans(eva_number, hour)
             for plan in raw_plans:
                 clean_plan = process_plan(eva_number, plan)
                 insert_plan = Trip()

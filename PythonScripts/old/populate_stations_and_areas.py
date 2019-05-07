@@ -3,8 +3,8 @@ import requests
 import json
 
 from time import sleep
-from base import engine
-from filesncodes import dbapi, stationsfile, areasfile, stations_to_scan_file
+from PythonScripts.base import engine
+from filesncodes import dbapi, areasfile
 
 
 def populate_areas(con, file):

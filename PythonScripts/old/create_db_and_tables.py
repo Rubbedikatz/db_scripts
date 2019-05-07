@@ -1,6 +1,4 @@
-from base import engine, Base
-from sqlalchemy_objects import *
-
+from PythonScripts.base import engine, Base
 
 Base.metadata.drop_all(engine)
 Base.metadata.create_all(engine)

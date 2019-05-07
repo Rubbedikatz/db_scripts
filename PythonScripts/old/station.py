@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, Float
 from sqlalchemy.orm import relationship
 
-from base import Base
+from PythonScripts.base import Base
 
 
 class Station(Base):

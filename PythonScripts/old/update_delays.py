@@ -3,10 +3,8 @@ from datetime import datetime
 from xml.etree import ElementTree
 
 from base import Session
-from station import Station
-from trip import Trip
-from filesncodes import dbapi, stations_to_scan_file
-from pandas import DataFrame, read_csv
+from sqlalchemy_objects import Station, Trip
+from api_keys import dbapi
 from time import sleep
 
 session = Session()
@@ -45,18 +43,25 @@ def update_trips_with_delay(delay, trips):
             print("Delay data added for trip at %s" % t.eva_number)
 
 
+def get_stations_from_db(sess):
+    stations = []
+    for instance in sess.query(Station):
+        stations.append(instance.eva_number)
+    return stations
+
+
 if __name__ == "__main__":
-    stations_to_scan = read_csv(stations_to_scan_file, header=None)
-    for eva_number in stations_to_scan.iloc[:,0]:
+    stations_to_scan = get_stations_from_db(session)
+    for eva_number in stations_to_scan:
         trips_this_hour = session.query(Trip).filter(Trip.eva_number == eva_number)\
             .filter(Trip.hour_retrieved == this_hour)
         if trips_this_hour.first() is not None:
-            sleep(3)
+            sleep(2)
             raw_delays = get_delays(eva_number)
             for row in raw_delays:
                 delayed = process_delays(row)
                 update_trips_with_delay(delayed, trips_this_hour.all())
         else:
-            print("No trips found for % this hour. Abort updating delays." % station)
+            print("No trips found for %s this hour. Abort updating delays." % eva_number)
     session.commit()
     session.close()

@@ -1,8 +1,6 @@
 from base import engine, Base
-from station import Station
-from area import Area
-from trip import Trip
-from weather import Weather
+from sqlalchemy_objects import *
+
 
 Base.metadata.drop_all(engine)
 Base.metadata.create_all(engine)

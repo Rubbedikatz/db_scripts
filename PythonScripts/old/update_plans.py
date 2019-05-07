@@ -1,13 +1,12 @@
 import requests
 from datetime import datetime
 from xml.etree import ElementTree
-
-from filesncodes import dbapi, stations_to_scan_file
-from base import Session
-from station import Station
-from trip import Trip
-from pandas import DataFrame, read_csv
 from time import sleep
+
+from api_keys import dbapi
+from base import Session
+from sqlalchemy_objects import Station, Trip
+
 
 def get_plans(station, time):
     headers = {"Authorization": "Bearer %s" % dbapi}
@@ -45,29 +44,48 @@ def process_plan(eva_number, plan):
     except (AttributeError, KeyError):
         trip["dp"] = None
     return trip
-    
-    
-def main():
-    session = Session()
-    if session is not None:
-        this_hour = datetime.now().strftime("%y%m%d/%H")
-        # read list of stations to scan from csv file created when the database 
-        # was populated with station data
-        stations_to_scan = read_csv(stations_to_scan_file, header=None)
-        # loop through all eva_numbers in stations_to_scan file and fetch plan data
-        for eva_number in stations_to_scan.iloc[:,0]:         
+
+
+def get_stations_from_db(sess):
+    stations = []
+    for instance in sess.query(Station):
+        stations.append(instance.eva_number)
+    return stations
+
+
+def update_plan(sess):
+    """
+    reads list of stations to scan from csv file created when the database
+    was populated with station data
+    checks before if plan for this hour was already downloaded to avoid unnecessary api calls
+    """
+    this_hour = datetime.now().strftime("%y%m%d/%H")
+    with open("log.txt", "r") as f:
+        last_updated = f.readlines()
+    if last_updated[0] != this_hour:
+
+        stations_to_scan = get_stations_from_db(sess)
+        for eva_number in set(stations_to_scan):
             raw_plans = get_plans(eva_number, this_hour)
             for plan in raw_plans:
                 clean_plan = process_plan(eva_number, plan)
                 insert_plan = Trip()
                 insert_plan.set_var(clean_plan)
-                session.merge(insert_plan)
+                sess.merge(insert_plan)
             print("New plan data fetched for %s" % insert_plan.eva_number)
-            sleep(3)
-        session.commit()
+            sleep(2)
+        sess.commit()
+        with open("log.txt", "w") as f:
+            f.write(this_hour)
+
+
+def main():
+    session = Session()
+    if session is not None:
+        update_plan(session)
         session.close()
     else:
-        print("Error! cannot create the database connection.") 
+        print("Error! cannot create database connection.")
 
 
 if __name__ == '__main__':

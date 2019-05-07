@@ -2,10 +2,9 @@ import requests
 import json
 from datetime import datetime
 
-from filesncodes import weatherapi
+from api_keys import weatherapi
 from base import Session
-from area import Area
-from weather import Weather
+from sqlalchemy_objects import Weather, Area
 
 
 def get_weather(area):
@@ -15,15 +14,15 @@ def get_weather(area):
 
 
 def process_weather(area_id, raw_data, time):
-    weather = {"description": raw_data["weather"][0]["description"],
-               "temperature": raw_data["main"]["temp"],
-               "wind_speed": raw_data["wind"]["speed"],
-               "time_retrieved": int(time),
-               "area_id": area_id}
-    return weather
+    weather_dict = {"description": raw_data["weather"][0]["description"],
+                    "temperature": raw_data["main"]["temp"],
+                    "wind_speed": raw_data["wind"]["speed"],
+                    "time_retrieved": int(time),
+                    "area_id": area_id}
+    return weather_dict
 
     
-def main():
+if __name__ == '__main__':
     session = Session()
     if session is not None:
         this_hour = datetime.now().strftime("%y%m%d%H")
@@ -34,12 +33,9 @@ def main():
             insert_weather = Weather()
             insert_weather.set_var(weather)
             session.merge(insert_weather)
-            print(f"Weather added for area {insert_weather.area_id}")
+            print("Weather added for area %s" % insert_weather.area_id)
         session.commit()
         session.close()
     else:
-        print("Error! cannot create the database connection.")     
+        print("Error! cannot create database connection.")
 
-
-if __name__ == '__main__':
-    main()

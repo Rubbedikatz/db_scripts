@@ -16,7 +16,7 @@ def create_database(con):
 
 def populate_areas(con):
     try:
-        df = pd.read_csv("../areas.csv")
+        df = pd.read_csv("areas.csv")
         df.to_sql("areas", con, if_exists="append", index=False)
         print("areas populated")
     except FileNotFoundError as e:

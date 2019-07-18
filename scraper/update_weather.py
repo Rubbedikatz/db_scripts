@@ -2,9 +2,9 @@ import requests
 import json
 from datetime import datetime
 
-from api_keys import weatherapi
-from base import Session
-from sqlalchemy_objects import Weather, Area
+from scraper.api_keys import weatherapi
+from scraper.base import Session
+from scraper.sqlalchemy_objects import Weather, Area
 
 
 def get_weather(area):

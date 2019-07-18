@@ -2,8 +2,9 @@ import json
 import numpy as np
 from sqlalchemy import create_engine
 import pandas as pd
+import os
 
-engine = create_engine("sqlite:///../deutschebahn_big.db", echo=False)
+engine = create_engine("sqlite:////data/deutschebahn_big.db", echo=False)
 
 df = pd.read_sql_query("SELECT id, ar, dp, car, cdp, name FROM trips\
                            JOIN stations ON trips.eva_number = stations.eva_number \
@@ -44,5 +45,5 @@ def df_to_geojson(df, properties, lat='latitude', lon='longitude'):
 props = ["trips", "mean_delay", "name"]
 geojson = df_to_geojson(stations_summary, props)
 output_filename = 'cities.json'
-with open(output_filename, 'w') as output_file:
+with open(os.join('data' + output_filename), 'w') as output_file:
     json.dump(geojson, output_file) 

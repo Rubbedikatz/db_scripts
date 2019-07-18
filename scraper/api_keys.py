@@ -1,0 +1,2 @@
+dbapi = " cd1f2d4f048794f11f114a31d67fe2f2"
+weatherapi = "a75337397580dce62a0f53c0501143c3"

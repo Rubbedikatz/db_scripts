@@ -3,9 +3,9 @@ from datetime import datetime
 from xml.etree import ElementTree
 from time import sleep
 
-from api_keys import dbapi
-from base import Session
-from sqlalchemy_objects import Station, Trip
+from scraper.api_keys import dbapi
+from scraper.base import Session
+from scraper.sqlalchemy_objects import Station, Trip
 
 
 def get_plans(station, time):

@@ -20,7 +20,7 @@ var div = d3.select("body").append("div")
     .style("opacity", 0);
 
 // insert states data
-d3.json("./bundeslander.json", function(bundeslander) {
+d3.json("./data/bundeslander.json", function(bundeslander) {
 
   var bounds = d3.geo.bounds(bundeslander),
       bottomLeft = bounds[0],
@@ -59,7 +59,7 @@ d3.json("./bundeslander.json", function(bundeslander) {
         .attr("d", geoPath)
 
   // insert station data
-  d3.json("./cities.json", function(stations) {
+  d3.json("./data/cities.json", function(stations) {
         
     // get max and min delay to calculate color scale domain
     var delays = [];

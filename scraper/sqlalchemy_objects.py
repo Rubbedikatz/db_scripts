@@ -1,7 +1,7 @@
 from sqlalchemy import Column, String, Integer, ForeignKey, Float
 from sqlalchemy.orm import relationship
 
-from base import Base
+from scraper.base import Base
 
 
 class Area(Base):

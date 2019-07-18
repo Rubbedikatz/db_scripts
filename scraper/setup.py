@@ -1,10 +1,11 @@
-from base import engine, Base
 from time import sleep
-from api_keys import dbapi
-from sqlalchemy_objects import Station, Trip, Weather, Area
 import requests
 import pandas as pd
 import json
+import os
+from scraper.base import engine, Base
+from scraper.api_keys import dbapi
+from scraper.sqlalchemy_objects import Station, Trip, Weather, Area
 
 
 def create_database(con):
@@ -16,7 +17,7 @@ def create_database(con):
 
 def populate_areas(con):
     try:
-        df = pd.read_csv("areas.csv")
+        df = pd.read_csv(os.path.join("scraper", "areas.csv"))
         df.to_sql("areas", con, if_exists="append", index=False)
         print("areas populated")
     except FileNotFoundError as e:
@@ -63,7 +64,7 @@ def populate_stations(con):
     biggest_stations = all_stations.loc[all_stations["Kat. Vst"] <= 1, "Bf. Nr."]
     insert_df = pd.DataFrame()
     for number in biggest_stations:
-        sleep(2)  # delay api calls to avoid hitting the rate limit
+        sleep(1)  # delay api calls to avoid hitting the rate limit
         raw_station = fetch_station_data(number)
         ins_station = process_row(raw_station)
         insert_df = insert_df.append(ins_station)

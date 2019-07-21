@@ -58,6 +58,7 @@ def populate_stations(con):
     This function filters out stations of category 1, because they have supposedly the most traffic
     passing through.
     """
+    print("downloading station data from deutschebahn.com...")
     filename = "http://download-data.deutschebahn.com/static/datasets/stationsdaten/DBSuS-Uebersicht_Bahnhoefe-Stand2019-03.csv"
     all_stations = pd.read_csv(filename, sep=";")
 
@@ -68,7 +69,7 @@ def populate_stations(con):
         raw_station = fetch_station_data(number)
         ins_station = process_row(raw_station)
         insert_df = insert_df.append(ins_station)
-        print("%s ready to be added to database" % ins_station.loc[:, "name"].iloc[0])
+        print(f"Download data for: {ins_station.loc[:, "name"].iloc[0]})
     insert_df.to_sql("stations", con, if_exists="replace", index=True, index_label="eva_number")
     print("All stations added to database")
 

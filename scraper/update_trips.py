@@ -19,19 +19,32 @@ def get_plans(station, time):
             print(f"Error for {station}. Trying again ({i+1})")
     if r.status_code == 500:
         print(f"Internal server error: 500. Could not fetch data for {station} after several tries.")
+        with open("errors.txt", "a+") as f:
+            f.write(f"Error {r.status_code} getting plans for {station} at {time}.")
         return 
     results = ElementTree.fromstring(r.content)
     return results
 
 
-def get_delays(eva_number):
+def get_delays(eva_number, time):
     """
     this function takes the number of a train station and retrieves delay data
     from the timetable API on deutschebahn.com and
     returns an XML object
     """
     headers = {"Authorization": "Bearer %s" % dbapi}
-    r = requests.get("https://api.deutschebahn.com/timetables/v1/fchg/%s" % eva_number, headers=headers)
+    for i in range(5):
+        r = requests.get("https://api.deutschebahn.com/timetables/v1/fchg/%s" % eva_number, headers=headers)
+        if r.status_code != 500: 
+            break
+        elif i < 5:
+            sleep(i*2)
+            print(f"Error for {eva_number}. Trying again ({i+1})")
+    if r.status_code == 500:
+        print(f"Internal server error: 500. Could not fetch data for {eva_number} after several tries.")
+        with open("errors.txt", "a+") as f:
+            f.write(f"Error {r.status_code} getting weather data for {eva_number} at {time}.")
+        return 
     results = ElementTree.fromstring(r.content)
     return results
 
@@ -125,7 +138,7 @@ def update_delays(sess, stations, hour):
             .filter(Trip.hour_retrieved == hour)
         if trips_this_hour.first() is not None:
             sleep(2)
-            raw_delays = get_delays(eva_number)
+            raw_delays = get_delays(eva_number, hour)
             for row in raw_delays:
                 delayed = process_delays(row)
                 update_trips_with_delay(delayed, trips_this_hour.all(), sess)

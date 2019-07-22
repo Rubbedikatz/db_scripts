@@ -68,7 +68,7 @@ def populate_stations(con):
     stations_to_scan = stations_to_scan.append(all_stations["Bf. Nr."].loc[all_stations["Station"].isin(additional_stations)])
     insert_df = pd.DataFrame()
     for number in stations_to_scan:
-        sleep(1)  # delay api calls to avoid hitting the rate limit
+        sleep(0.5)  # delay api calls to avoid hitting the rate limit
         raw_station = fetch_station_data(number)
         ins_station = process_row(raw_station)
         insert_df = insert_df.append(ins_station)

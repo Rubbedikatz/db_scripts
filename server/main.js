@@ -1,24 +1,29 @@
 var width = 960,
     height = 500,
     focused = null,
-    geoPath;
+    geoPath,
 
+// insert div to contain svg and controls
+frame = d3.select("body")
+  .append("div")
+  .attr("width", width)
+  .attr("height", height+10)
+  .attr("style", "text-align:center"),
+  
 // insert svg element as canvas
-var svg = d3.select("body") 
-  .append("svg")
+svg = frame.append("svg")
     .attr("width", width)
-    .attr("height", height);
+    .attr("height", height),
 
-    // mark g objects as "states" so they're rendered correctly by d3
-    var g = svg.append("g")
-      .append("g")
-        .attr("id", "states");
+// mark g objects as "states" so they're rendered correctly by d3
+g = svg.append("g")
+  .append("g")
+    .attr("id", "states"),
 
 // define div for the tooltip
-var div = d3.select("body").append("div")	
+tooltip = d3.select("body").append("div")	
     .attr("class", "tooltip")				
     .style("opacity", 0);
-
 
 d3.queue()
 	.defer(d3.json, "./data/bundeslander.json")
@@ -29,21 +34,18 @@ d3.queue()
 // insert states data
 function render_map(error, result_data) {
 
-  var mydiv = d3.select("body")
-  .append("div")
-  .attr("style", "text-align:center");
-
-  mydiv.append("input")
+  frame.append("input")
       .attr("type", "range")
       .attr("min", 0)
-      .attr("max", 1)
+      .attr("max", result_data[1].length-1)
       .attr("step", "1")
-      .attr("id", "year")
+      .attr("id", "slider")
+      .attr("value", 0)
       .on("input", function input() {
         sliderUpdate(this, result_data[1]);
       });
 
-  // get max and min delay of all trips to calculate color scale domain
+    // get max and min delay of all trips to calculate color scale domain
   var delays = [];
   result_data[1].forEach(function (month, index) {
     for (var station in month.features) {
@@ -58,7 +60,7 @@ function render_map(error, result_data) {
                         .range(["green", "yellow", "red"]);
   
   var bundeslander = result_data[0],
-      stations = result_data[1][0]
+      stations = result_data[1]
 
   var bounds = d3.geoBounds(bundeslander),
     bottomLeft = bounds[0],
@@ -95,47 +97,55 @@ function render_map(error, result_data) {
       .append("path")
         .attr("class", "feature")
         .attr("d", geoPath)
-        
-  // insert and render stations
-  g.selectAll("circle.feature")
-      .data(stations.features)
-      .enter()
-      .append("circle")
-        .attr("class", "feature")
-        .attr("cx", function(d){ return second_projection(d.geometry.coordinates)[0]; } )
-        .attr("cy", function(d){ return second_projection(d.geometry.coordinates)[1]; } )
-        .attr("r", function(d){ return d.properties.trips/500; })
-        .attr("fill", function(d){return myColor(d.properties.mean_delay) })
-        // add tooltips on mouseover
-        .on("mouseover", function(d) {		
-          div.transition()		
-              .duration(200)		
-              .style("opacity", .9);		
-          div.html("<b>" + d.properties.name + "</b><br/>"  + "Avg. delay: " + Math.round(d.properties.mean_delay*100)/100 + " minutes" + "<br/>" + "Total trips: " + d.properties.trips)	
-              .style("left", (d3.event.pageX) + "px")		
-              .style("top", (d3.event.pageY - 28) + "px");	
-          })					
-        .on("mouseout", function(d) {		
-          div.transition()		
-              .duration(500)		
-              .style("opacity", 0);
-          })
-        // event for clicking on a station
-        .on("click", clickStation);
+  
+  // initialize stations with first dataset
+  render_stations(stations, 0);
+
+  function render_stations(station_data, index){
+    // insert and render stations
+    var circles = g.selectAll("circle.feature")
+        .data(station_data[index].features);
+
+      circles.enter().append("circle")
+          .attr("class", "feature")
+          .attr("cx", function(d){ return second_projection(d.geometry.coordinates)[0]; } )
+          .attr("cy", function(d){ return second_projection(d.geometry.coordinates)[1]; } )
+          .attr("r", function(d){ return d.properties.trips/500; })
+          .attr("fill", function(d){return myColor(d.properties.mean_delay) })
+          // add tooltips on mouseover
+          .on("mouseover", function(d) {		
+            tooltip.transition()		
+                .duration(200)		
+                .style("opacity", .9);		
+            tooltip.html("<b>" + d.properties.name + "</b><br/>"  + "Avg. delay: " + Math.round(d.properties.mean_delay*100)/100 + " minutes" + "<br/>" + "Total trips: " + d.properties.trips)	
+                .style("left", (d3.event.pageX) + "px")		
+                .style("top", (d3.event.pageY - 28) + "px");	
+            })					
+          .on("mouseout", function(d) {		
+            tooltip.transition()		
+                .duration(500)		
+                .style("opacity", 0);
+            })
+          // event for clicking on a station
+          .on("click", clickStation)
+          .merge(circles)
+            .transition().duration(300)
+            .attr("r", function(d){ return d.properties.trips/500; })
+            .attr("fill", function(d){return myColor(d.properties.mean_delay) })
+            // updating data loses focus, so we remove the black border...
+            .style("stroke", "white");
+          
+          circles.exit().remove();
+  };       
 
 
     function sliderUpdate(slider, data){
       // update size and color of circles based on the slider position
-      g.selectAll("circle.feature")
-        .data(data[slider.value].features)
-        .transition(700)
-        .attr("r", function(d){ return d.properties.trips/500; })
-        .attr("fill", function(d){return myColor(d.properties.mean_delay) })
-        // updating data loses focus, so we remove the black border...
-        .style("stroke", "white");
+      render_stations(data, slider.value);
+
       g.transition()
         // ...and zoom back out to default
-        .duration(700)
+        .duration(300)
         .attr("transform", "translate("+ (width/2) +","+ (height/2) +")scale(1)translate("+ (-width/2) +","+ (-height/2) +")")
         .style("stroke-width", 1.75 +"px");
     };

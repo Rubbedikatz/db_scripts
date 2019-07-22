@@ -10,7 +10,16 @@ from scraper.sqlalchemy_objects import Station, Trip
 
 def get_plans(station, time):
     headers = {"Authorization": "Bearer %s" % dbapi}
-    r = requests.get("https://api.deutschebahn.com/timetables/v1/plan/%s/%s" % (station, time), headers=headers)
+    for i in range(5):
+        r = requests.get("https://api.deutschebahn.com/timetables/v1/plan/%s/%s" % (station, time), headers=headers)
+        if r.status_code != 500: 
+            break
+        elif i < 5:
+            sleep(i*2)
+            print(f"Error for {station}. Trying again ({i+1})")
+    if r.status_code == 500:
+        print(f"Internal server error: 500. Could not fetch data for {station} after several tries.")
+        return 
     results = ElementTree.fromstring(r.content)
     return results
 
@@ -67,8 +76,7 @@ def get_stations_from_db(sess):
 
 def update_plans(sess, stations, hour):
     """
-    reads list of stations to scan from csv file created when the database
-    was populated with station data
+    reads list of stations to scan from station data in database
     checks before if plan for this hour was already downloaded to avoid unnecessary api calls
     """
     try:
@@ -85,7 +93,7 @@ def update_plans(sess, stations, hour):
                 insert_plan.set_var(clean_plan)
                 sess.merge(insert_plan)
             print("New plan data fetched for %s" % eva_number)
-            sleep(2)
+            sleep(3.5)
         sess.commit()
         with open("log.txt", "w") as f:
             f.write(this_hour)

@@ -62,14 +62,17 @@ def populate_stations(con):
     filename = "http://download-data.deutschebahn.com/static/datasets/stationsdaten/DBSuS-Uebersicht_Bahnhoefe-Stand2019-03.csv"
     all_stations = pd.read_csv(filename, sep=";")
 
-    biggest_stations = all_stations.loc[all_stations["Kat. Vst"] <= 1, "Bf. Nr."]
+    stations_to_scan = all_stations.loc[all_stations["Kat. Vst"] <= 1, "Bf. Nr."]
+    # add more stations because of their central location and high traffic
+    additional_stations = ["Erfurt Hbf", "Kassel Hbf"]
+    stations_to_scan = stations_to_scan.append(all_stations["Bf. Nr."].loc[all_stations["Station"].isin(additional_stations)])
     insert_df = pd.DataFrame()
-    for number in biggest_stations:
+    for number in stations_to_scan:
         sleep(1)  # delay api calls to avoid hitting the rate limit
         raw_station = fetch_station_data(number)
         ins_station = process_row(raw_station)
         insert_df = insert_df.append(ins_station)
-        print(f"Download data for: {ins_station.loc[:, "name"].iloc[0]})
+        print(f"Download data for: {ins_station.loc[:, 'name'].iloc[0]}")
     insert_df.to_sql("stations", con, if_exists="replace", index=True, index_label="eva_number")
     print("All stations added to database")
 

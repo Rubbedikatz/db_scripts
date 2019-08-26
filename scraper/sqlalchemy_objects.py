@@ -1,7 +1,7 @@
 from sqlalchemy import Column, String, Integer, ForeignKey, Float
 from sqlalchemy.orm import relationship
 
-from base import Base
+from scraper.base import Base
 
 
 class Area(Base):
@@ -47,6 +47,8 @@ class Weather(Base):
     wind_speed = Column(Float)
     area_id = Column(Integer, ForeignKey("areas.id"))
     area = relationship("Area", back_populates="weather")
+    eva_number = Column(Integer, ForeignKey("stations.eva_number"))
+    # station = relationship("Station", back_populates="station")
 
     def set_var(self, var):
         self.__dict__.update(var)

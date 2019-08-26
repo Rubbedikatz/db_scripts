@@ -3,26 +3,48 @@ from datetime import datetime
 from xml.etree import ElementTree
 from time import sleep
 
-from api_keys import dbapi
-from base import Session
-from sqlalchemy_objects import Station, Trip
+from scraper.api_keys import dbapi
+from scraper.base import Session
+from scraper.sqlalchemy_objects import Station, Trip
 
 
 def get_plans(station, time):
     headers = {"Authorization": "Bearer %s" % dbapi}
-    r = requests.get("https://api.deutschebahn.com/timetables/v1/plan/%s/%s" % (station, time), headers=headers)
+    for i in range(5):
+        r = requests.get("https://api.deutschebahn.com/timetables/v1/plan/%s/%s" % (station, time), headers=headers)
+        if r.status_code != 500: 
+            break
+        elif i < 5:
+            sleep(i*2)
+            print(f"Error for {station}. Trying again ({i+1})")
+    if r.status_code == 500:
+        print(f"Internal server error: 500. Could not fetch data for {station} after several tries.")
+        with open("errors.txt", "a+") as f:
+            f.write(f"Error {r.status_code} getting plans for {station} at {time}.")
+        return 
     results = ElementTree.fromstring(r.content)
     return results
 
 
-def get_delays(eva_number):
+def get_delays(eva_number, time):
     """
     this function takes the number of a train station and retrieves delay data
     from the timetable API on deutschebahn.com and
     returns an XML object
     """
     headers = {"Authorization": "Bearer %s" % dbapi}
-    r = requests.get("https://api.deutschebahn.com/timetables/v1/fchg/%s" % eva_number, headers=headers)
+    for i in range(5):
+        r = requests.get("https://api.deutschebahn.com/timetables/v1/fchg/%s" % eva_number, headers=headers)
+        if r.status_code != 500: 
+            break
+        elif i < 5:
+            sleep(i*2)
+            print(f"Error for {eva_number}. Trying again ({i+1})")
+    if r.status_code == 500:
+        print(f"Internal server error: 500. Could not fetch data for {eva_number} after several tries.")
+        with open("errors.txt", "a+") as f:
+            f.write(f"Error {r.status_code} getting weather data for {eva_number} at {time}.")
+        return 
     results = ElementTree.fromstring(r.content)
     return results
 
@@ -67,8 +89,7 @@ def get_stations_from_db(sess):
 
 def update_plans(sess, stations, hour):
     """
-    reads list of stations to scan from csv file created when the database
-    was populated with station data
+    reads list of stations to scan from station data in database
     checks before if plan for this hour was already downloaded to avoid unnecessary api calls
     """
     try:
@@ -85,7 +106,7 @@ def update_plans(sess, stations, hour):
                 insert_plan.set_var(clean_plan)
                 sess.merge(insert_plan)
             print("New plan data fetched for %s" % eva_number)
-            sleep(2)
+            sleep(3.5)
         sess.commit()
         with open("log.txt", "w") as f:
             f.write(this_hour)
@@ -112,18 +133,19 @@ def update_trips_with_delay(delay, trips, sess):
 
 def update_delays(sess, stations, hour):
     for eva_number in set(stations):
+        print(f"looking for delays for {eva_number}")        
         hour = hour.replace("/", "")
         trips_this_hour = sess.query(Trip).filter(Trip.eva_number == eva_number)\
             .filter(Trip.hour_retrieved == hour)
         if trips_this_hour.first() is not None:
             sleep(2)
-            raw_delays = get_delays(eva_number)
+            raw_delays = get_delays(eva_number, hour)
             for row in raw_delays:
                 delayed = process_delays(row)
                 update_trips_with_delay(delayed, trips_this_hour.all(), sess)
-            print("Delays added for station %s." % eva_number)
+            print(f"Delays added for station {eva_number}.")
         else:
-            print("No trips found for %s this hour." % eva_number)
+            print(f"No trips found for {eva_number} at {hour}.")
     sess.commit()
 
 

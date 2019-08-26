@@ -1,10 +1,11 @@
-from base import engine, Base
 from time import sleep
-from api_keys import dbapi
-from sqlalchemy_objects import Station, Trip, Weather, Area
 import requests
 import pandas as pd
 import json
+import os
+from scraper.base import engine, Base
+from scraper.api_keys import dbapi
+from scraper.sqlalchemy_objects import Station, Trip, Weather, Area
 
 
 def create_database(con):
@@ -16,7 +17,7 @@ def create_database(con):
 
 def populate_areas(con):
     try:
-        df = pd.read_csv("areas.csv")
+        df = pd.read_csv(os.path.join("scraper", "areas.csv"))
         df.to_sql("areas", con, if_exists="append", index=False)
         print("areas populated")
     except FileNotFoundError as e:
@@ -57,17 +58,21 @@ def populate_stations(con):
     This function filters out stations of category 1, because they have supposedly the most traffic
     passing through.
     """
+    print("downloading station data from deutschebahn.com...")
     filename = "http://download-data.deutschebahn.com/static/datasets/stationsdaten/DBSuS-Uebersicht_Bahnhoefe-Stand2019-03.csv"
     all_stations = pd.read_csv(filename, sep=";")
 
-    biggest_stations = all_stations.loc[all_stations["Kat. Vst"] <= 1, "Bf. Nr."]
+    stations_to_scan = all_stations.loc[all_stations["Kat. Vst"] <= 1, "Bf. Nr."]
+    # add more stations because of their central location and high traffic
+    additional_stations = ["Erfurt Hbf", "Kassel Hbf"]
+    stations_to_scan = stations_to_scan.append(all_stations["Bf. Nr."].loc[all_stations["Station"].isin(additional_stations)])
     insert_df = pd.DataFrame()
-    for number in biggest_stations:
-        sleep(2)  # delay api calls to avoid hitting the rate limit
+    for number in stations_to_scan:
+        sleep(0.5)  # delay api calls to avoid hitting the rate limit
         raw_station = fetch_station_data(number)
         ins_station = process_row(raw_station)
         insert_df = insert_df.append(ins_station)
-        print("%s ready to be added to database" % ins_station.loc[:, "name"].iloc[0])
+        print(f"Download data for: {ins_station.loc[:, 'name'].iloc[0]}")
     insert_df.to_sql("stations", con, if_exists="replace", index=True, index_label="eva_number")
     print("All stations added to database")
 

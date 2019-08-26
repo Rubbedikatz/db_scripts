@@ -133,6 +133,7 @@ def update_trips_with_delay(delay, trips, sess):
 
 def update_delays(sess, stations, hour):
     for eva_number in set(stations):
+        print(f"looking for delays for {eva_number}")        
         hour = hour.replace("/", "")
         trips_this_hour = sess.query(Trip).filter(Trip.eva_number == eva_number)\
             .filter(Trip.hour_retrieved == hour)
@@ -142,9 +143,9 @@ def update_delays(sess, stations, hour):
             for row in raw_delays:
                 delayed = process_delays(row)
                 update_trips_with_delay(delayed, trips_this_hour.all(), sess)
-            print("Delays added for station %s." % eva_number)
+            print(f"Delays added for station {eva_number}.")
         else:
-            print("No trips found for %s this hour." % eva_number)
+            print(f"No trips found for {eva_number} at {hour}.")
     sess.commit()
 
 

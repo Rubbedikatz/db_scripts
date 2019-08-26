@@ -4,7 +4,7 @@ from sqlalchemy import create_engine
 import pandas as pd
 import os
 
-engine = create_engine("sqlite:////data/deutschebahn_big.db", echo=False)
+engine = create_engine("sqlite:////data/deutschebahn.db", echo=False)
 
 df = pd.read_sql_query("SELECT id, ar, dp, car, cdp, name FROM trips\
                            JOIN stations ON trips.eva_number = stations.eva_number \
